@@ -67,7 +67,7 @@ void Toolbar::close()
 }
 
 Screen::Screen(const char *title) :
-    _window(NULL), _renderer(NULL), _texture(NULL), _pixels(NULL), _pixels2(NULL)
+    _window(NULL), _renderer(NULL), _texture(NULL), _pixels(NULL), _pixels2(NULL), numColor(NULL)
 {
     this->title = title;   
 }
@@ -112,6 +112,7 @@ bool Screen::init()
 
     _pixels = new Uint32[SCR_WIDTH * SCR_HEIGHT];
     _pixels2 = new Uint32[SCR_WIDTH * SCR_HEIGHT];
+    numColor = new unsigned char[SCR_WIDTH * SCR_HEIGHT];
 
     int x = 0;
     int y = 0;
@@ -153,7 +154,7 @@ unsigned char Screen::processEvents(SDL_Event &ev, Sint32 &xShift)
     return 0;
 }
 
-void Screen::setPixel(int xpx, int ypx, Uint8 red, Uint8 green, Uint8 blue, bool avg)
+void Screen::setPixel(int xpx, int ypx, Uint8 red, Uint8 green, Uint8 blue)//, bool avg)
 {
     Uint32 color = 0x00000000;
 
@@ -168,16 +169,39 @@ void Screen::setPixel(int xpx, int ypx, Uint8 red, Uint8 green, Uint8 blue, bool
     if(xpx < 0 || xpx >= SCR_WIDTH || ypx < 0 || ypx >= SCR_HEIGHT)
         return;
 
-    if(avg)
-    {
-        int color2 = _pixels[(SCR_WIDTH * ypx) + xpx];
-    
-        if(color2 != 0)
-            color = ((int)color + color2)/2;
-        else
-            _pixels[(SCR_WIDTH * ypx) + xpx] = color;
-    }
+//    if(avg)
+//    {
+//        int color2 = _pixels[(SCR_WIDTH * ypx) + xpx];
+//        int numColors = numColor[(SCR_WIDTH * ypx) + xpx];
+//
+//        if(color2 != 0)
+//            color = ((int)color + numColors*color2)/(numColors + 1);
+//        else
+//            _pixels[(SCR_WIDTH * ypx) + xpx] = color;
+//    }
     _pixels[(SCR_WIDTH * ypx) + xpx] = color;
+}
+
+void Screen::setNumColor(int xpx, int ypx, unsigned char newNumColor)
+{
+    numColor[(SCR_WIDTH * ypx) + xpx] = newNumColor;
+}
+
+unsigned char Screen::getNumColor(int xpx, int ypx)
+{
+    return numColor[(SCR_WIDTH * ypx) + xpx];
+}
+
+Uint8* Screen::getColor(int xpx, int ypx)
+{
+    Uint8 Colors[3];
+    Uint32 fullColor = _pixels[(SCR_WIDTH * ypx) + xpx];
+    Colors[0] = (fullColor & 0xFF000000) >> 24;
+    Colors[1] = (fullColor & 0x00FF0000) >> 16;
+    Colors[2] = (fullColor & 0x0000FF00) >> 8;
+
+    Uint8 *colors = Colors;
+    return colors;
 }
 
 void Screen::boxBlur(int adjuster)
@@ -215,7 +239,7 @@ void Screen::boxBlur(int adjuster)
             AvGreen = green/9;
             AvBlue = blue/9;
 
-            setPixel(x, y, AvRed, AvGreen, AvBlue, false);
+            setPixel(x, y, AvRed, AvGreen, AvBlue);
         }
     }
 }
@@ -239,6 +263,7 @@ void Screen::clear()
 {
     memset(_pixels, 0, SCR_WIDTH*SCR_HEIGHT*sizeof(Uint32));
     memset(_pixels2, 0, SCR_WIDTH*SCR_HEIGHT*sizeof(Uint32));
+    memset(numColor, 0, SCR_WIDTH*SCR_HEIGHT*sizeof(unsigned char));
 }
 
 void Screen::close()
@@ -246,6 +271,7 @@ void Screen::close()
     toolbar.close();
     delete [] _pixels;
     delete [] _pixels2;
+    delete [] numColor;
     SDL_DestroyRenderer(_renderer);
     SDL_DestroyTexture(_texture);
     SDL_DestroyWindow(_window);

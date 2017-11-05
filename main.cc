@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
-#include <time.h>
+//#include <time.h>
 #include "Screen.h"
 #include "Notes.h"
  using namespace std;
@@ -25,7 +25,7 @@ bool getShapeOutline(int shapeCode, int x_start, int y_start, int width, int hei
 
 int main()
 {
-    srand(time(NULL));
+    //srand(time(NULL));
 
     Screen screen = Screen("MAM Clone");
 
@@ -43,8 +43,10 @@ int main()
 
     for(int yy = 0; yy < Screen::SCR_HEIGHT; yy++)
     {
-        screen.setPixel(Screen::SCR_WIDTH/2, yy, 255, 255, 255, false);
+        screen.setPixel(Screen::SCR_WIDTH/2, yy, 255, 255, 255);
     }
+
+//    cout << (int)screen.getColor(Screen::SCR_WIDTH/2, 10)[0];
 
     int x;
     int y;
@@ -55,14 +57,15 @@ int main()
     Uint8 green;
     Uint8 blue;
     Sint32 xShift;
-
     bool quit = false;
     bool playFile = false;
     bool mouseDown = false;
     bool iterateTempo = true;
     bool nowLine = true;
-    bool colorScheme = false; // "true" for color by track, "false" for color by pitch.
+    bool colorScheme = true; //false; // "true" for color by track, "false" for color by pitch.
+    bool showOutline = true;    
     char tonic = 3; // C = 0, C#/Db = 1, etc.
+    char overlapCount = 1; //bool iterOverlapCount = false;
 
     Note* pNotes = piece.getNotes();
     globalTempo = pNotes[0]._tempo;
@@ -84,7 +87,7 @@ int main()
             {            
                 for(int yy = 0; yy < Screen::SCR_HEIGHT; yy++)
                 {
-                    screen.setPixel(Screen::SCR_WIDTH/2, yy, 255, 255, 255, false);
+                    screen.setPixel(Screen::SCR_WIDTH/2, yy, 255, 255, 255);
                 }
             }
 
@@ -98,36 +101,38 @@ int main()
                 y = -(_note.y_pos - 63) * 14 + Screen::SCR_HEIGHT/2;
                 width = Screen::SCR_WIDTH + round((_note.x_pos + _note._duration)/9.0) - x - 1;                
 
-                if(colorScheme)
-                {
-                    pColors = getColorFromCode(_note._color, true);
-        
-                    red = pColors[0];
-                    green = pColors[1];
-                    blue = pColors[2];
-                } else
+//                if(colorScheme)
+//                {
+//                    pColors = getColorFromCode(_note._color, true);
+//        
+//                    red = pColors[0];
+//                    green = pColors[1];
+//                    blue = pColors[2];
+//                } else
+                if(!colorScheme)
                 {
                     pColors = getColorFromCode(((_note.y_pos - 60 - tonic)%12 + 12)%12, false);
         
                     red = pColors[0];
                     green = pColors[1];
                     blue = pColors[2];
-                }
+//                }
 
 //                for(int jj = 0; (double)jj < _note._duration/10.0; jj++) //duration/(20.0/1.5)
 //                {
 //                    width++;
 //                }
                 
-                if((x <= Screen::SCR_WIDTH/2) && (x >= Screen::SCR_WIDTH/2 - width))//(x >= Screen::SCR_WIDTH/2 - _note._duration/10.0))
-                {
-//                    red = ((int)red + 0xFF)/2;
-//                    green = ((int)green + 0xFF)/2;
-//                    blue = ((int)blue + 0xFF)/2;
-                    red = 0xFF;
-                    green = 0xFF;
-                    blue = 0xFF;
-                    globalTempo = _note._tempo;
+                    if((x <= Screen::SCR_WIDTH/2) && (x >= Screen::SCR_WIDTH/2 - width))//(x >= Screen::SCR_WIDTH/2 - _note._duration/10.0))
+                    {
+//                        red = ((int)red + 0xFF)/2;
+//                        green = ((int)green + 0xFF)/2;
+//                        blue = ((int)blue + 0xFF)/2;
+                        red = 0xFF;
+                        green = 0xFF;
+                        blue = 0xFF;
+                        globalTempo = _note._tempo;
+                    }
                 }
                 if((x < Screen::SCR_WIDTH) && (x > -width))//(x > -_note._duration/10.0))
                 {
@@ -135,8 +140,55 @@ int main()
                     for(int jj = 0; jj < width; jj++)//(double)jj < _note._duration/10.0; jj++)
                     {   for(int kk = 0; kk < Note::HEIGHT; kk++)
                         {
+                            if(colorScheme) {
+                                pColors = getColorFromCode(_note._color, true);
+        
+                                red = pColors[0];
+                                green = pColors[1];
+                                blue = pColors[2];
+                                
+                                Uint8 *colors2 = screen.getColor(x + jj, y + kk);
+
+                                Uint8 red2 = colors2[0];
+                                Uint8 green2 = colors2[1];
+                                Uint8 blue2 = colors2[2];
+
+                                if(((x <= Screen::SCR_WIDTH/2) && (x >= Screen::SCR_WIDTH/2 - width))
+                                    || ((red2 == 255) && (green2 == 255) && (blue2 == 255)))
+                                {
+                                    red = 0xFF;
+                                    green = 0xFF;
+                                    blue = 0xFF;
+                                    globalTempo = _note._tempo;
+                                }
+
+                                if(((red2 != 0) || (green2 != 0) || (blue2 != 0))
+                                        && ((red2 != 255) || (green2 != 255) || (blue2 != 255)))
+                                {
+                                    overlapCount = screen.getNumColor(x + jj, y + kk);
+                                    red = ((int)red * overlapCount + (int)red2)/(overlapCount + 1);
+                                    green = ((int)green * overlapCount + (int)green2)/(overlapCount + 1);
+                                    blue = ((int)blue * overlapCount + (int)blue2)/(overlapCount + 1);
+
+//                                    screen.setNumColor(x + jj, y + kk, overlapCount + 1);
+                                    //iterOverlapCount = true;
+                                }
+
+//                                if(((x <= Screen::SCR_WIDTH/2) && (x >= Screen::SCR_WIDTH/2 - width)) //(x >= Screen::SCR_WIDTH/2 - _note._duration/10.0))
+//                                    || ((red2 == 255) || (green2 == 255) || (blue2 == 255)))
+//                                {
+//                                    red = 0xFF;
+//                                    green = 0xFF;
+//                                    blue = 0xFF;
+//                                    globalTempo = _note._tempo;
+//                                }
+                            }
                             if(getShape(_note._color, x, y, width, Note::HEIGHT, x + jj, y + kk))
-                                screen.setPixel(x + jj, y + kk, red, green, blue, false);
+                            {
+//                                screen.setNumColor(x + jj, y + kk, screen.getNumColor(x + jj, y + kk) + 1);
+                                screen.setPixel(x + jj, y + kk, red, green, blue);
+                                screen.setNumColor(x + jj, y + kk, screen.getNumColor(x + jj, y + kk) + 1);
+                            }
                         }
                     }
 //                    for(int jj = -1; (double)jj < _note._duration/10.0; jj++)
@@ -150,28 +202,26 @@ int main()
 //                    }
                 }
             }
-            for(int ii = 0; ii < piece.getNumNotes(); ii++) // Draw the note border
+            if(showOutline)
             {
-                if(pNotes[ii].render)
+                for(int ii = 0; ii < piece.getNumNotes(); ii++) // Draw the note border
                 {
-                    _note = pNotes[ii];
-
-                    x = Screen::SCR_WIDTH + round(_note.x_pos/9.0);//12;
-                    y = -(_note.y_pos - 63) * 14 + Screen::SCR_HEIGHT/2;
-                    width = Screen::SCR_WIDTH + round((_note.x_pos + _note._duration)/9.0) - x - 1;
-
-//                    for(int jj = 0; (double)jj < _note._duration/10.0; jj++) //duration/(20.0/1.5)
-//                    {
-//                        width++;
-//                    }
+                    if(pNotes[ii].render)
+                    {
+                        _note = pNotes[ii];
+    
+                        x = Screen::SCR_WIDTH + round(_note.x_pos/9.0);//12;
+                        y = -(_note.y_pos - 63) * 14 + Screen::SCR_HEIGHT/2;
+                        width = Screen::SCR_WIDTH + round((_note.x_pos + _note._duration)/9.0) - x - 1;
                     
-                    for(int jj = 0; jj < width; jj++)//(double)jj < _note._duration/10.0; jj++)
-                    {   for(int kk = 0; kk < Note::HEIGHT; kk++)
-                        {
-//                            if(getShape(_note._color, x, y, width, Note::HEIGHT, x + jj, y + kk))
-//                                screen.setPixel(x + jj, y + kk, red, green, blue, false);
-                            if(getShapeOutline(_note._color, x, y, width, Note::HEIGHT, x + jj, y + kk))
-                                screen.setPixel(x + jj, y + kk, 100, 100, 100, false);
+                        for(int jj = 0; jj < width; jj++)
+                        {   for(int kk = 0; kk < Note::HEIGHT; kk++)
+                            {
+//                                if(getShape(_note._color, x, y, width, Note::HEIGHT, x + jj, y + kk))
+//                                    screen.setPixel(x + jj, y + kk, red, green, blue, false);
+                                if(getShapeOutline(_note._color, x, y, width, Note::HEIGHT, x + jj, y + kk))
+                                    screen.setPixel(x + jj, y + kk, 100, 100, 100);
+                            }
                         }
                     }
                 }
