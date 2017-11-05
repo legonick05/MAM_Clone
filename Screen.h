@@ -40,6 +40,7 @@ private:
     SDL_Texture *_texture;
     Uint32 *_pixels;
     Uint32 *_pixels2; // Second buffer for blurring effects
+    unsigned char *numColor;
     
 public:
     const static int SCR_WIDTH = 1280;//960;
@@ -49,7 +50,10 @@ public:
     Screen(const char *title);
     bool init();
     unsigned char processEvents(SDL_Event &ev, Sint32 &xShift);
-    void setPixel(int xpx, int ypx, Uint8 red, Uint8 green, Uint8 blue, bool avg);
+    void setPixel(int xpx, int ypx, Uint8 red, Uint8 green, Uint8 blue);
+    void setNumColor(int xpx, int ypx, unsigned char newNumColor);
+    unsigned char getNumColor(int xpx, int ypx);
+    Uint8 *getColor(int xpx, int ypx);
     void boxBlur(int adjuster);
     void swap();
     void update();
